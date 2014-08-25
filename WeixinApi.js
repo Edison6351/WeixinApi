@@ -51,15 +51,14 @@ var WeixinApi = (function () {
                     case 'share_timeline:cancel':
                         callbacks.cancel && callbacks.cancel(resp);
                         break;
+                    // share_timeline:fail　发送失败
+                    case 'share_timeline:fail':
+                        callbacks.fail && callbacks.fail(resp);
+                        break;
                     // share_timeline:confirm 发送成功
                     case 'share_timeline:confirm':
                     case 'share_timeline:ok':
                         callbacks.confirm && callbacks.confirm(resp);
-                        break;
-                    // share_timeline:fail　发送失败
-                    case 'share_timeline:fail':
-                    default:
-                        callbacks.fail && callbacks.fail(resp);
                         break;
                 }
                 // 无论成功失败都会执行的回调
@@ -103,38 +102,40 @@ var WeixinApi = (function () {
      * @p-config    {Function}  fail(resp)      失败
      * @p-config    {Function}  confirm(resp)   成功
      * @p-config    {Function}  all(resp)       无论成功失败都会执行的回调
+     * @p-config    {function} BeforeShare  在分享之前进行回调 返回True Or False
      */
     function weixinSendAppMessage(data, callbacks) {
         callbacks = callbacks || {};
         var sendAppMessage = function (theData) {
-            WeixinJSBridge.invoke('sendAppMessage', {
-                "appid":theData.appId ? theData.appId : '',
-                "img_url":theData.imgUrl,
-                "link":theData.link,
-                "desc":theData.desc,
-                "title":theData.title,
-                "img_width":"120",
-                "img_height":"120"
-            }, function (resp) {
-                switch (resp.err_msg) {
-                    // send_app_msg:cancel 用户取消
+            if (callbacks.BeforeShare()) {
+                WeixinJSBridge.invoke('sendAppMessage', {
+                    "appid": theData.appId ? theData.appId : '',
+                    "img_url": theData.imgUrl,
+                    "link": theData.link,
+                    "desc": theData.desc,
+                    "title": theData.title,
+                    "img_width": "120",
+                    "img_height": "120"
+                }, function(resp) {
+                    switch (resp.err_msg) {
+                        // send_app_msg:cancel 用户取消
                     case 'send_app_msg:cancel':
                         callbacks.cancel && callbacks.cancel(resp);
+                        break;
+                    // send_app_msg:fail　发送失败
+                    case 'send_app_msg:fail':
+                        callbacks.fail && callbacks.fail(resp);
                         break;
                     // send_app_msg:confirm 发送成功
                     case 'send_app_msg:confirm':
                     case 'send_app_msg:ok':
                         callbacks.confirm && callbacks.confirm(resp);
                         break;
-                    // send_app_msg:fail　发送失败
-                    case 'send_app_msg:fail':
-                    default:
-                        callbacks.fail && callbacks.fail(resp);
-                        break;
-                }
-                // 无论成功失败都会执行的回调
-                callbacks.all && callbacks.all(resp);
-            });
+                    }
+                    // 无论成功失败都会执行的回调
+                    callbacks.all && callbacks.all(resp);
+                });
+            }
         };
         WeixinJSBridge.on('menu:share:appmessage', function (argv) {
             if (callbacks.async && callbacks.ready) {
@@ -183,15 +184,14 @@ var WeixinApi = (function () {
                     case 'share_weibo:cancel':
                         callbacks.cancel && callbacks.cancel(resp);
                         break;
+                    // share_weibo:fail　发送失败
+                    case 'share_weibo:fail':
+                        callbacks.fail && callbacks.fail(resp);
+                        break;
                     // share_weibo:confirm 发送成功
                     case 'share_weibo:confirm':
                     case 'share_weibo:ok':
                         callbacks.confirm && callbacks.confirm(resp);
-                        break;
-                    // share_weibo:fail　发送失败
-                    case 'share_weibo:fail':
-                    default:
-                        callbacks.fail && callbacks.fail(resp);
                         break;
                 }
                 // 无论成功失败都会执行的回调
@@ -216,28 +216,6 @@ var WeixinApi = (function () {
                 shareWeibo(data);
             }
         });
-    }
-
-    /**
-     * 加关注（此功能只是暂时先加上，不过因为权限限制问题，不能用，如果你的站点是部署在*.qq.com下，也许可行）
-     * @param       {String}    appWeixinId     微信公众号ID
-     * @param       {Object}    callbacks       回调方法
-     * @p-config    {Function}  fail(resp)      失败
-     * @p-config    {Function}  confirm(resp)   成功
-     */
-    function addContact(appWeixinId,callbacks){
-        callbacks = callbacks || {};
-        WeixinJSBridge.invoke("addContact", {
-            webtype: "1",
-            username: appWeixinId
-        }, function (resp) {
-            var success = !resp.err_msg || "add_contact:ok" == resp.err_msg || "add_contact:added" == resp.err_msg;
-            if(success) {
-                callbacks.success && callbacks.success(resp);
-            }else{
-                callbacks.fail && callbacks.fail(resp);
-            }
-        })
     }
 
     /**
@@ -344,12 +322,11 @@ var WeixinApi = (function () {
     }
 
     return {
-        version         :"1.9",
+        version         :"1.8.1",
         ready           :wxJsBridgeReady,
         shareToTimeline :weixinShareTimeline,
         shareToWeibo    :weixinShareWeibo,
         shareToFriend   :weixinSendAppMessage,
-        addContact      :addContact,
         showOptionMenu  :showOptionMenu,
         hideOptionMenu  :hideOptionMenu,
         showToolbar     :showToolbar,
